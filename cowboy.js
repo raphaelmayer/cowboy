@@ -292,10 +292,10 @@ function main() {
     window.onkeyup = function (e) { pressedKeys[e.keyCode] = false; }
     window.onkeydown = function (e) { pressedKeys[e.keyCode] = true; }
 
-    let keydown = document.addEventListener("keydown", handleKeyDown);
-    let mousemove = document.addEventListener("mousemove", handleMouseMove);
+    let keydown_event = document.addEventListener("keydown", handleKeyDown);
+    let mousemove_event = document.addEventListener("mousemove", handleMouseMove);
     // let mousedown = document.addEventListener("mousedown", handleMouseClick);
-    let mouseup = document.addEventListener("mouseup", handleMouseClick);
+    let mouseup_event = document.addEventListener("mouseup", handleMouseClick);
 
     window.requestAnimationFrame(update);
 
@@ -411,7 +411,7 @@ function main() {
             else if (currentSelection.friendly === 1) context.strokeStyle = "blue";
             else context.strokeStyle = "#222";
             context.beginPath();
-            context.rect(toTileSize(x) * TILE_SIZE, toTileSize(y) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            context.rect(x, y, TILE_SIZE, TILE_SIZE);
             context.stroke();
 
             // draw selection window
@@ -487,7 +487,7 @@ function main() {
 
         // weather effects
         // needs global lightning variable
-        if (!lightning && rand(200) === 1) lightning = (rand(4) + 1) * 5; 
+        if (!lightning && rand(200) === 1) lightning = (rand(4) + 1) * 5;
         if (lightning || lightning === 0) {
             if (lightning % 6 === 5) context.fillStyle = "#fff";
             if (lightning % 6 === 4) context.fillStyle = "#eee";
@@ -589,11 +589,19 @@ function main() {
         // })
     }
     function handleKeyDown(event) {
-        function animateWalk(duration, steps, animFunction) {
+        /**
+         * 
+         * @param {*} duration 
+         * @param {*} steps 
+         * @param {*} animFunction 
+         */
+        function animateWalk(tile, duration, steps, animFunction) {
             for (let i = 0; i < duration; i += (duration / steps)) {
                 setTimeout(() => {
                     animFunction();
                     // window.requestAnimationFrame(update);
+                    if (i > duration - (duration / steps))
+                        tile.occupied = true;
                 }, i);
             }
         }
@@ -618,6 +626,13 @@ function main() {
             if (code === "KeyA") toX = -1;
             if (code === "KeyD") toX = 1;
 
+            // falls mir schon in bewegung sind nach rechts oder unten, isses toTileSize
+            // natürlich immer no links oben, sollt aber eig die kollision vom tile aus
+            // checken, des eins weiter rechts bzw unten is.
+            if (x * TILE_SIZE < currentSelection.x) ++toX;
+            if (y * TILE_SIZE < currentSelection.y) ++toY;
+
+
             const i = convert2dto1d(x + toX, y + toY, TM_WIDTH); // index of next tile
             console.log("x:", x, "y:", y, " => i:", i);
 
@@ -632,23 +647,31 @@ function main() {
             const j = convert2dto1d(x, y, TM_WIDTH); // index of current tile
             console.log(i, j)
             screen_buffer[j].occupied = false;
-            screen_buffer[i].occupied = true;
+            // screen_buffer[i].occupied = true;
             console.log(screen_buffer[i]);
             return false;
         }
-
+        
         switch (event.code) {
             case "KeyW":
-                if (!wouldCollide(event.code)) animateWalk(200, 20, () => currentSelection.y += -TILE_SIZE / 20);
+                if (!wouldCollide(event.code))
+                    animateWalk(tile, 200, TILE_SIZE, () => currentSelection.y--);
+                // animateWalk(200, 20, () => currentSelection.y += -TILE_SIZE / 20);
                 break;
             case "KeyD":
-                if (!wouldCollide(event.code)) animateWalk(200, 20, () => currentSelection.x += TILE_SIZE / 20);
+                if (!wouldCollide(event.code))
+                    animateWalk(tile, 200, TILE_SIZE, () => currentSelection.x++);
+                // animateWalk(200, 20, () => currentSelection.x += TILE_SIZE / 20);
                 break;
             case "KeyS":
-                if (!wouldCollide(event.code)) animateWalk(200, 20, () => currentSelection.y += TILE_SIZE / 20);
+                if (!wouldCollide(event.code))
+                    animateWalk(tile, 200, TILE_SIZE, () => currentSelection.y++);
+                // animateWalk(200, 20, () => currentSelection.y += TILE_SIZE / 20);
                 break;
             case "KeyA":
-                if (!wouldCollide(event.code)) animateWalk(200, 20, () => currentSelection.x += -TILE_SIZE / 20);
+                if (!wouldCollide(event.code))
+                    animateWalk(tile, 200, TILE_SIZE, () => currentSelection.x--);
+                // animateWalk(200, 20, () => currentSelection.x += -TILE_SIZE / 20);
                 break;
             case "Digit1": // attack mode
                 // preview range
