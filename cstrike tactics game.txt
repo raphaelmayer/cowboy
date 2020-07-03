@@ -61,3 +61,6 @@ BUGS:
 when holding move key sometimes walk into Wall
 when moving rapidly occupied falsly gets set to true
 bullet spam removes multiple entities
+
+Chars sind eigentlich in da oberen linken ecke von am tile, dadurch passieren viele Sachen 
+nach links / oben instant und nach rechts / unten verzögert. (einfache lösung wär, die position zu normalisieren oder an offset iwi festlegen)

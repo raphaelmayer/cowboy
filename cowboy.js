@@ -294,7 +294,7 @@ function main() {
 
     let keydown_event = document.addEventListener("keydown", handleKeyDown);
     let mousemove_event = document.addEventListener("mousemove", handleMouseMove);
-    // let mousedown = document.addEventListener("mousedown", handleMouseClick);
+    // let mousedown_event = document.addEventListener("mousedown", handleMouseClick);
     let mouseup_event = document.addEventListener("mouseup", handleMouseClick);
 
     window.requestAnimationFrame(update);
@@ -303,7 +303,6 @@ function main() {
         const tilesInRange = [];
         for (let i = -range; i < range; i++) {
             for (let j = -range; j < range; j++) {
-                // easy pythagoras to determine distance 
                 const targetX = x + i * TILE_SIZE;
                 const targetY = y + j * TILE_SIZE;
 
@@ -311,7 +310,7 @@ function main() {
                     isInBounds(targetX, targetY) && (
                         // if x and y is smaller than our range - (range / 5), it is in range
                         (Math.abs(i) < range - (range / 5) && Math.abs(j) < range - (range / 5)) ||
-                        pythagoras(targetX - x, targetY - y) < (range * TILE_SIZE) * (range * TILE_SIZE)
+                        getTileDistance(x, y, targetX, targetY) < range
                     )
                 ) {
                     tilesInRange.push({ x: targetX, y: targetY });
@@ -353,7 +352,7 @@ function main() {
         // bgcontext.fillStyle = "black"; // set background color
         bgcontext.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
         visibleTiles.forEach(tile => {
-            drawSprite(screen_buffer[convert2dto1d(toTileSize(tile.x), toTileSize(tile.y), TM_WIDTH)], bgcontext)
+            drawSprite(screen_buffer[getTileIndex(tile.x, tile.y)], bgcontext);
         });
 
 
@@ -379,6 +378,10 @@ function main() {
             mapInitialized = true;
         }
 
+        // set all tiles to unoccupied and then go through entities and set occupied accordingly.
+        // not sure about doing it on each frame, but having it in wouldCollide and animateWalk sucks balls
+        screen_buffer.forEach(tile => tile.occupied = false);
+
         // draw entities
         entities.forEach(e => {
             // // friendlies haben damit immer an circle drum herum
@@ -390,6 +393,11 @@ function main() {
             // context.beginPath();
             // context.arc(toTileSize(x) * TILE_SIZE + TILE_SIZE / 2, toTileSize(y) * TILE_SIZE + TILE_SIZE / 2, TILE_SIZE / 2, 0, 2 * Math.PI);
             // context.stroke();
+
+            // set occupied on tiles
+            let i = getTileIndex(e.x, e.y);
+            if (screen_buffer[i])
+                screen_buffer[i].occupied = true;
 
             // vll a drawEntity(), de dann zb sich um die sprite walking animation kümmert
             drawSprite(e, context);
@@ -520,6 +528,7 @@ function main() {
      * @param {*} ctx - context to draw to (multiple canvases)
      * @param {*} overrideX - override target x coordinate
      * @param {*} overrideY - override target y coordinate
+     * eig sollts wohl so aufgrufen werden: drawSprite(tile.x, tile.y)
      */
     function drawSprite(gameObject, ctx, overrideX, overrideY) { // besserer name statt gameObject ha
         if (!gameObject || !ctx) {
@@ -581,7 +590,6 @@ function main() {
 
         }
         currentMousePosition = { x, y };
-        // window.requestAnimationFrame(update);
 
         // preview.push({
         //     x: toTileSize(x) * TILE_SIZE,
@@ -589,6 +597,15 @@ function main() {
         // })
     }
     function handleKeyDown(event) {
+        console.log(event.code);
+        // if (!currentSelection || !currentSelection.movementSpeed) return;
+
+        if (event.code !== "Digit1") {
+            while (overlays.length > 0)
+                overlays.pop();
+            mode = STANDARD_MODE;
+        }
+
         /**
          * 
          * @param {*} duration 
@@ -599,21 +616,12 @@ function main() {
             for (let i = 0; i < duration; i += (duration / steps)) {
                 setTimeout(() => {
                     animFunction();
-                    // window.requestAnimationFrame(update);
-                    if (i > duration - (duration / steps))
-                        tile.occupied = true;
+                    if (i > duration - 2 * (duration / steps))
+                        console.log("tile:", tile);
+                    tile.occupied = true;
                 }, i);
             }
         }
-        console.log(event.code);
-        // if (!currentSelection || !currentSelection.movementSpeed) return;
-
-        if (event.code !== "Digit1") {
-            while (overlays.length > 0)
-                overlays.pop();
-            mode = STANDARD_MODE;
-        }
-
         function wouldCollide(code) {
             if (!currentSelection || !currentSelection.movementSpeed) return true;
             const x = toTileSize(currentSelection.x);
@@ -633,48 +641,54 @@ function main() {
             if (y * TILE_SIZE < currentSelection.y) ++toY;
 
 
-            const i = convert2dto1d(x + toX, y + toY, TM_WIDTH); // index of next tile
+            const i = getIndex(x + toX, y + toY, TM_WIDTH); // index of next tile
             console.log("x:", x, "y:", y, " => i:", i);
 
             // needs to check entities aswell; either look into entities or screen buffer.occupied
             if (!screen_buffer[i].traversable || screen_buffer[i].occupied) {
-                console.log("collision detected");
-                console.log(screen_buffer[i]);
+                console.log("collision detected:", screen_buffer[i]);
                 console.log("currentSelection:", currentSelection);
                 // drawSprite(screen_buffer[i], bgcontext);
                 return true;
             }
-            const j = convert2dto1d(x, y, TM_WIDTH); // index of current tile
+            const j = getIndex(x, y, TM_WIDTH); // index of current tile
             console.log(i, j)
             screen_buffer[j].occupied = false;
             // screen_buffer[i].occupied = true;
             console.log(screen_buffer[i]);
             return false;
         }
-        
+
         switch (event.code) {
             case "KeyW":
                 if (!wouldCollide(event.code))
-                    animateWalk(tile, 200, TILE_SIZE, () => currentSelection.y--);
+                    animateWalk(
+                        screen_buffer[getTileIndex(currentSelection.x, currentSelection.y - TILE_SIZE)],
+                        200, TILE_SIZE, () => currentSelection.y--);
                 // animateWalk(200, 20, () => currentSelection.y += -TILE_SIZE / 20);
                 break;
             case "KeyD":
                 if (!wouldCollide(event.code))
-                    animateWalk(tile, 200, TILE_SIZE, () => currentSelection.x++);
+                    animateWalk(
+                        screen_buffer[getTileIndex(currentSelection.x + TILE_SIZE, currentSelection.y)],
+                        200, TILE_SIZE, () => currentSelection.x++);
                 // animateWalk(200, 20, () => currentSelection.x += TILE_SIZE / 20);
                 break;
             case "KeyS":
                 if (!wouldCollide(event.code))
-                    animateWalk(tile, 200, TILE_SIZE, () => currentSelection.y++);
+                    animateWalk(
+                        screen_buffer[getTileIndex(currentSelection.x, currentSelection.y + TILE_SIZE)],
+                        200, TILE_SIZE, () => currentSelection.y++);
                 // animateWalk(200, 20, () => currentSelection.y += TILE_SIZE / 20);
                 break;
             case "KeyA":
                 if (!wouldCollide(event.code))
-                    animateWalk(tile, 200, TILE_SIZE, () => currentSelection.x--);
+                    animateWalk(
+                        screen_buffer[getTileIndex(currentSelection.x - TILE_SIZE, currentSelection.y)],
+                        200, TILE_SIZE, () => currentSelection.x--);
                 // animateWalk(200, 20, () => currentSelection.x += -TILE_SIZE / 20);
                 break;
             case "Digit1": // attack mode
-                // preview range
                 console.log("attack mode");
 
                 if (!currentSelection || mode === ATTACK_MODE) {
@@ -689,8 +703,7 @@ function main() {
                     const { x, y, range } = currentSelection;
                     for (let i = -range; i < range; i++) {
                         for (let j = -range; j < range; j++)
-                            // easy pythagoras to determine range 
-                            if (Math.pow(x + i * TILE_SIZE - x, 2) + Math.pow(y + j * TILE_SIZE - y, 2) < Math.pow(range * TILE_SIZE, 2))
+                            if (getTileDistance(x, y, x + i * TILE_SIZE, y + j * TILE_SIZE) < range)
                                 overlays.push({ x: x + i * TILE_SIZE, y: y + j * TILE_SIZE });
                     }
                 }
@@ -708,13 +721,10 @@ function main() {
                 lightning = 10;
                 break;
         }
-        // window.requestAnimationFrame(update);
     }
     function handleMouseClick(event) {
         leftMousePressed = !leftMousePressed;
-        const xx = toTileSize(event.x);
-        const yy = toTileSize(event.y);
-        console.log("clicked:", "<" + xx, yy + "> =>", convert2dto1d(xx, yy, TM_WIDTH));
+
         // handle tile selection
         // check entities first
         let entityFound = false; // hack to prevent tile selection loop from running
@@ -728,10 +738,7 @@ function main() {
 
                     // check if within range
                     const { x, y, range, weapon } = currentSelection;
-                    console.log(currentSelection);
-                    console.log(Math.pow(e.x - x, 2) + Math.pow(e.y - y, 2), Math.pow(range * TILE_SIZE, 2))
-                    const distanceSquared = Math.pow(e.x - x, 2) + Math.pow(e.y - y, 2);
-                    if (distanceSquared < Math.pow(range * TILE_SIZE, 2)) {
+                    if (getTileDistance(x, y, e.x, e.y) < range) {
                         // shoot entity
                         const bullet = projectile({
                             x, y,
@@ -749,7 +756,7 @@ function main() {
                                 const dy = e.y - y;
                                 for (let i = 0, j = 1; i < duration; i += (duration / steps), j++) {
                                     setTimeout(() => {
-                                        if (!screen_buffer[convert2dto1d(toTileSize(bullet.x), toTileSize(bullet.y), TM_WIDTH)].traversable) {
+                                        if (!screen_buffer[getTileIndex(bullet.x, bullet.y)].traversable) {
                                             console.log("bullet stopped");
                                             collided = true;
                                             return;
@@ -762,27 +769,6 @@ function main() {
                                 setTimeout(() => !collided && entities.splice(i, 1), duration * 1000);
 
 
-                            },
-                            __animate: (duration, steps) => {
-                                console.log("bullet animate")
-                                let collided = false;
-                                const dx = e.x - x;
-                                const dy = e.y - y;
-                                for (let i = 0; i < duration; i += (duration / steps)) {
-                                    setTimeout(() => {
-                                        console.log("XX:", x);
-                                        if (!screen_buffer[convert2dto1d(toTileSize(bullet.x), toTileSize(bullet.y), TM_WIDTH)].traversable) {
-                                            console.log("bullet stopped");
-                                            collided = true;
-                                            return;
-                                        }
-                                        bullet.x += dx / steps;
-                                        bullet.y += dy / steps;
-                                        // entities.push(bullet);
-                                        // window.requestAnimationFrame(update);
-                                    }, i);
-                                }
-                                setTimeout(() => !collided && entities.splice(i, 1), duration - (duration / steps), duration);
                             }
                         });
                         entities.push(bullet); // spawn bullet
@@ -815,14 +801,9 @@ function main() {
         // else select tile
         // if attack mode, keep currently selected entity and continue
         if (!entityFound && mode !== ATTACK_MODE) {
-            for (let i = 0; i < screen_buffer.length; i++) {
-                const tile = screen_buffer[i];
-                if (toTileSize(tile.x) === toTileSize(event.x) && toTileSize(tile.y) === toTileSize(event.y)) {
-                    currentSelection = tile;
-                }
-            }
+            const i = getTileIndex(event.x, event.y);
+            currentSelection = screen_buffer[i];
         }
-        console.log(currentSelection);
 
         // highlght selection (machma später)
         if (leftMousePressed) {
@@ -841,7 +822,6 @@ function main() {
             //     screen_buffer.push(preview.pop());
             // }
         }
-        // window.requestAnimationFrame(update);
     }
 
     function handleMouseDown(event) {
@@ -854,22 +834,30 @@ function main() {
 }
 
 // util
-function convert2dto1d_ALT(x, y) {
-    return x + (TM_WIDTH) * y;
-}
-
-// util
-function convert2dto1d(x, y, dim) {
-    return x + dim * y;
-}
-
-function convert1dto2d(i, dimX) {
-    // console.log("x:", i % dimX, "y:", Math.floor(i / dimX))
-
+function convert1dto2d(i, width) {
     return {
-        x: i % dimX,
-        y: Math.floor(i / dimX)
+        x: i % width,
+        y: Math.floor(i / width)
     };
+}
+
+/**
+ * Takes any 2d coordinates and returns the 1d index.
+ * @param {*} x 
+ * @param {*} y 
+ * @param {*} width 
+ */
+function getIndex(x, y, width = WINDOW_WIDTH) {
+    return x + width * y;
+}
+
+/**
+ * Takes any 2d coordinates and returns the 1d tile index.
+ * @param {*} x 
+ * @param {*} y 
+ */
+function getTileIndex(x, y) {
+    return getIndex(toTileSize(x), toTileSize(y), TM_WIDTH);
 }
 
 function toTileSize(n) {
@@ -883,22 +871,22 @@ function toTileSize(n) {
 function rand(n) {
     return Math.floor(Math.random() * n);
 }
-
-function pythagorasDistanceTiles(x, y) {
-    return Math.sqrt(toTileSize(x) * toTileSize(x) + toTileSize(y) * toTileSize(y));
-}
 /**
  * Calculate distance between two points in tile units.
+ * 
+ * Es könnt insofern besser sein bei die echten Koordinaten zu bleiben, da getTileDistance viel dividiert.
+ * Da große Unterschied is, dass ma dann beim range-check (range * TILE_SIZE) machen müssen: 
+ * if (getDistance(x, y, e.x, e.y) < range * TILE_SIZE) vs
+ * if (getTileDistance(x, y, e.x, e.y) < range) 
  * @param {Float} x1 
  * @param {Float} y1 
  * @param {Float} x2 
  * @param {Float} y2 
  */
 function getTileDistance(x1, y1, x2, y2) {
-    // pythagoras
     const dx = toTileSize(x2) - toTileSize(x1);
     const dy = toTileSize(y2) - toTileSize(y1);
-    return Math.sqrt(dx * dx + dy * dy);
+    return Math.sqrt(pythagoras(dx, dy));
 }
 
 /**
