@@ -1,0 +1,63 @@
+cstrike tactics game
+
+cs, nur rundenbasiert
+
+traversable und penetrable?
+
+Object { x, y, sprite, width?, height?, impassible?, elevation? }
+    Dynamic { movementSpeed?, vision?, friendly? }
+        Entity { movementSpeed, impassible, vision?, friendly? }
+            Living { health, vision?, status? }
+                Soldier { attack, range, attackSpeed?, weapon? }
+                Chicken
+            Projectile { targetX, targetY, animate? }
+                Bullet
+                Grenade
+        Event / Interactable
+        Item
+        Trap { ? }
+    Static
+        Tile { elevation?, isCover }
+            Floor { movementCost, occupied, hasBuilding? }
+                Door
+                Cover / Halfwall
+                Road
+            Wall { impassible = true? } // naja, is des, wie ma impassible verwenden wollen?
+                Tree
+                Building
+
+Wie mirs haben:
+GameObject 
+    Entity
+        Soldier, Chicken, Projectile
+    Tile
+        Floor: Door, Road
+        Wall: Tree
+
+TODO:
+des ganze amal in tile_size konvertieren
+des ganze amal zu vernünftige klassen konvertieren
+Collision Detection
+Mouse Controls
+Shooting
+Path Finding
+Turn System
+Match System
+Elevation
+Interieur
+
+IDEEN:
+Audio System
+Vll Kamera (also nied immer ganze map sehen. vll a fog of war)
+Stealth System / Line of Sight / Cover
+Inventory / Store / Customization
+Bullet Persistance
+Weather System / Day-Night Cycle (eigener Layer einfach?^^)
+Penetration: 1 Penetration heißt, 
+    dass die Bullet no einen Gegner mehr töten kann, 
+    sofern genug range da is. 
+
+BUGS: 
+when holding move key sometimes walk into Wall
+when moving rapidly occupied falsly gets set to true
+bullet spam removes multiple entities
