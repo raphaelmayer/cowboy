@@ -44,144 +44,9 @@ MAP_TEMPLATE += "#h            #      H   ---hhh#";
 MAP_TEMPLATE += "#hhhhhhhhhhhhh#hhhhh H ----hhhh#";
 MAP_TEMPLATE += "#####################H##########";
 
+
+
 window.onload = main;
-
-/**
- * Tile object with dimensions x = x / TILE_SIZE, y = y / TILE_SIZE
- * @param {Float} x 
- * @param {Float} y 
- */
-function gameObject({ x, y, name, color, sprite }) {
-    return {
-        x, y, name: name || "null", sprite: sprite || { x: 6, y: 2 }, color: color || "red"
-    }
-}
-
-function tile({ x, y, name, color, sprite, traversable, penetrable, seeable, occupied, movementCost }) {
-    return {
-        ...gameObject({ x, y, name, color, sprite }),
-        traversable: traversable, // can creatures move through
-        penetrable: penetrable, // can projectiles move through
-        seeable: seeable, // can projectiles move through
-        occupied: occupied === true ? true : false, // is a unit on the tile (eig woll ma de static objects ja nied ändern)
-        // hasBuilding: occupied === true ? true : false, // does tile already have building
-        movementCost: movementCost || 1
-    }
-}
-
-function floor({ x, y, name, sprite, movementCost }) {
-    return {
-        ...tile({
-            x, y, name, color: "white",
-            traversable: true, penetrable: true, seeable: true,
-            movementCost: movementCost || 1,
-            sprite
-        }),
-    }
-}
-function wall({ x, y, name, sprite, movementCost }) {
-    return {
-        ...tile({
-            x, y, name, color: "grey",
-            traversable: false, penetrable: false, seeable: false,
-            movementCost: movementCost || 1,
-            sprite
-        }),
-    }
-}
-function halfwall({ x, y, name, sprite }) {
-    return {
-        ...tile({
-            x, y, name, color: "lightgrey",
-            traversable: true, penetrable: false, seeable: true,
-            movementCost: 2,
-            sprite
-        })
-    }
-}
-function highgrass({ x, y, name, sprite }) {
-    return {
-        ...tile({
-            x, y, name, color: "darkgreen",
-            traversable: true, penetrable: true, seeable: false,
-            movementCost: 2,
-            sprite
-        })
-    }
-}
-
-function entity({ x, y, name, color, sprite, movementSpeed, friendly, vision }) {
-    return {
-        ...gameObject({ x, y, name, color, sprite }),
-        draw: null, // not in use; array of entities gets drawn to screen by coordinates
-        movementSpeed,
-        friendly: friendly ? friendly : 0, // enemy: -1, neutral: 0, friendliy: 1
-        vision: vision || 10,
-
-    };
-}
-
-function soldier({ x, y, name, color, sprite, range, movementSpeed, friendly }) {
-    movementSpeed = 4;
-    return {
-        ...entity({ x, y, name, color, sprite, movementSpeed, friendly }),
-        // health: 10,
-        // attack: 10, // eigentlich gun stats
-        range: (range || range === 0) ? range : 10, // eigentlich gun stats
-        // attackSpeed: 1, // eigentlich gun stats
-        // shoot: null // ?
-        // weapon?
-        // hory shiet da kommt no viel
-    };
-}
-
-function gunner({ x, y, name, sprite, friendly }) {
-    return {
-        ...soldier({
-            x, y, name, friendly,
-            sprite: sprite || { x: 0, y: 1 },
-            range: 10,
-            movementSpeed: 5,
-            name: "gunner",
-        }),
-        weapon: {
-            attack: 5,
-            velocity: 10,
-        }
-    }
-}
-
-function sniper({ x, y, friendly }) {
-    return {
-        ...soldier({
-            x, y, friendly,
-            sprite: { x: 3, y: 2 },
-            range: 20,
-            movementSpeed: 3,
-            name: "sniper",
-        }),
-        weapon: {
-            attack: 10,
-            velocity: 20,
-        }
-    }
-}
-
-function chicken({ x, y, name }) {
-    return {
-        ...entity({ x, y, name: "chicken", sprite: { x: 2, y: 1 }, movementSpeed: 3 })
-    }
-}
-
-function projectile({ x, y, sprite, targetX, targetY, animate }) {
-    sprite = sprite || { x: 5, y: 0 };
-    return {
-        ...entity({ x, y, sprite }),
-        targetX,
-        targetY,
-        animate: animate || null
-    };
-}
 
 function main() {
     // canvas shit
@@ -315,9 +180,9 @@ function main() {
 
     let keydown_event = document.addEventListener("keydown", handleKeyDown);
     let mousemove_event = document.addEventListener("mousemove", handleMouseMove);
-    // let mousedown_event = document.addEventListener("mousedown", handleMouseClick);
-    let mouseup_event = document.addEventListener("mouseup", handleMouseClick);
-
+    // let mousedown_event = document.addEventListener("mousedown", handleLeftClick);
+    let mouseup_event = document.addEventListener("mouseup", handleLeftClick);
+    let rightclick_event = document.addEventListener('contextmenu', handleRightClick); // Right click
     window.requestAnimationFrame(update);
 
     function update() {
@@ -343,29 +208,22 @@ function main() {
 
         // fog of war attempt
         const visibleTiles = [];
-        entities.forEach(e => {
-            if (e.friendly === 1) {
-                getTilesWithinDistance(e.x, e.y, e.vision).forEach(tile => visibleTiles.push(tile));
-            }
-        });
-        // bgcontext.clearRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-        // bgcontext.fillStyle = "black"; // set background color
-        bgcontext.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-        visibleTiles.forEach(tile => {
-            drawSprite(screen_buffer[getTileIndex(tile.x, tile.y)], bgcontext);
-            // bgcontext.fillStyle = "black"; // set background color
-            // bgcontext.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-        });
+        // entities.forEach(e => {
+        //     if (e.friendly === 1) {
+        //         getTilesWithinDistance(e.x, e.y, e.vision).forEach(tile => visibleTiles.push(tile));
+        //     }
+        // });
+        // // bgcontext.clearRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+        // // bgcontext.fillStyle = "black"; // set background color
+        // bgcontext.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+        // visibleTiles.forEach(tile => {
+        //     drawSprite(screen_buffer[getTileIndex(tile.x, tile.y)], bgcontext);
+        //     // bgcontext.fillStyle = "black"; // set background color
+        //     // bgcontext.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+        // });
 
-        function drawLine(sx, sy, ex, ey, context, color) {
-            if (color) context.strokeStyle = color;
-            context.beginPath();
-            context.moveTo(sx, sy);
-            context.lineTo(ex, ey);
-            context.stroke();
 
-        }
-        // also ob de üerhaupt nice isund nied einfach drawSprite besser wär
+        // also ob de üerhaupt nice is und nied einfach drawSprite besser wär
         function drawTilemap() {
             screen_buffer.forEach((tile, i) => {
                 // i is in tile units
@@ -410,9 +268,6 @@ function main() {
 
                 });
             }
-            context.font = "30px Arial";
-            context.fillStyle = "white";
-            context.fillText("" + "x: " + x + " y: " + y + " tx: " + toTileSize(x) + " ty: " + toTileSize(y) + ", fps: " + fps, 0, 30);
 
             let edges;
             let key;
@@ -423,9 +278,9 @@ function main() {
                 const polygon = calculateVisibilityPolygon(edges, x, y, 1000);
                 drawPolygonTriangles(x, y, polygon);
 
+                context.font = "30px Arial";
                 context.fillStyle = "white";
                 context.fillText(key, 20, 270);
-                context.font = "30px Arial";
                 context.fillText("Rays cast: " + polygon.length, 20, 300);
             }
             if (debug === 2) {
@@ -433,11 +288,11 @@ function main() {
                 edges = convertTileMapToPolyMap(screen_buffer, key, 0, 0, TM_WIDTH, TM_HEIGHT, TILE_SIZE, TM_WIDTH);
                 edges.forEach(edge => drawLine(edge.sx, edge.sy, edge.ex, edge.ey, context, "blue"));
                 const polygon = calculateVisibilityPolygon(edges, x, y, 1000);
-                fillInversePolygon(polygon);
+                fillInversePolygon(polygon, "black");
 
+                context.font = "30px Arial";
                 context.fillStyle = "white";
                 context.fillText(key, 20, 270);
-                context.font = "30px Arial";
                 context.fillText("Rays cast: " + polygon.length, 20, 300);
             }
             if (debug === 1) {
@@ -447,11 +302,15 @@ function main() {
                 const polygon = calculateVisibilityPolygon(edges, x, y, 1000);
                 drawPolygonTriangles(x, y, polygon);
 
+                context.font = "30px Arial";
                 context.fillStyle = "white";
                 context.fillText(key, 20, 270);
-                context.font = "30px Arial";
                 context.fillText("Rays cast: " + polygon.length, 20, 300);
             }
+
+            context.font = "30px Arial";
+            context.fillStyle = "white";
+            context.fillText("" + "x: " + x + " y: " + y + " tx: " + toTileSize(x) + " ty: " + toTileSize(y) + ", fps: " + fps, 0, 30);
         }
         function drawPolygonTriangles(xSource, ySource, polygon) {
             // // Draw each triangle in fan
@@ -466,10 +325,10 @@ function main() {
 
         }
 
-        function fillInversePolygon(polygon) {
+        function fillInversePolygon(polygon, color) {
             context.beginPath();
             // set context styles
-            context.fillStyle = "black";
+            context.fillStyle = color;
             context.moveTo(0, 0);
             context.lineTo(0, WINDOW_HEIGHT);
             context.lineTo(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -517,21 +376,30 @@ function main() {
 
         // draw current selection window (current top right tile) and rectangular highlight
         if (currentSelection) {
-            const { x, y } = currentSelection;
+            const { x, y, friendly, range } = currentSelection;
 
             // draw rectangle around selected tile
-            if (currentSelection.friendly === -1) context.strokeStyle = "red";
-            else if (currentSelection.friendly === 1) context.strokeStyle = "blue";
+            if (friendly === -1) context.strokeStyle = "red";
+            else if (friendly === 1) context.strokeStyle = "blue";
             else context.strokeStyle = "#222";
             context.beginPath();
             context.rect(x, y, TILE_SIZE, TILE_SIZE);
             context.stroke();
 
+            // if attack mode, draw range
+            if (mode === ATTACK_MODE) {
+                getTilesWithinDistance(x, y, range).forEach(tile => {
+                    context.beginPath();
+                    context.rect(tile.x, tile.y, TILE_SIZE, TILE_SIZE);
+                    context.stroke();
+                });
+            }
+
             // draw selection window
             context.font = "12px Arial";
             context.fillStyle = "#eee";
             context.fillRect(530, 340, WINDOW_WIDTH, WINDOW_HEIGHT);
-            const { movementSpeed, movementCost, name, traversable, occupied, range, attack } = currentSelection;
+            const { movementSpeed, movementCost, name, traversable, occupied, attack } = currentSelection;
             context.fillStyle = "#222";
             context.fillText(name, 540, 365);
             context.font = "10px Arial";
@@ -581,29 +449,29 @@ function main() {
 
         // weather effects
         // needs global lightning variable
-        if (!lightning && rand(200) === 1) lightning = (rand(4) + 1) * 5;
-        if (lightning || lightning === 0) {
-            if (lightning % 6 === 5) context.fillStyle = "#fff";
-            if (lightning % 6 === 4) context.fillStyle = "#eee";
-            if (lightning % 6 === 3) context.fillStyle = "#ddd";
-            if (lightning % 6 === 2) context.fillStyle = "#aaa";
-            if (lightning % 6 === 1) context.fillStyle = "#000";
-            if (lightning % 6 === 0) context.fillStyle = "#555";
-            screen_buffer.forEach(tile => context.fillRect(tile.x, tile.y, TILE_SIZE, TILE_SIZE))
-            lightning = lightning < 1 ? false : lightning - 1;
-        }
+        // if (!lightning && rand(200) === 1) lightning = (rand(4) + 1) * 5;
+        // if (lightning || lightning === 0) {
+        //     if (lightning % 6 === 5) context.fillStyle = "#fff";
+        //     if (lightning % 6 === 4) context.fillStyle = "#eee";
+        //     if (lightning % 6 === 3) context.fillStyle = "#ddd";
+        //     if (lightning % 6 === 2) context.fillStyle = "#aaa";
+        //     if (lightning % 6 === 1) context.fillStyle = "#000";
+        //     if (lightning % 6 === 0) context.fillStyle = "#555";
+        //     screen_buffer.forEach(tile => context.fillRect(tile.x, tile.y, TILE_SIZE, TILE_SIZE))
+        //     lightning = lightning < 1 ? false : lightning - 1;
+        // }
 
-        // des braucht a weatherParticles array
-        for (let i = 0; i < weatherParticles.length; i++) {
-            if (weatherParticles[i].y > WINDOW_HEIGHT) {
-                weatherParticles[i].y = 0;
-            }
-            if (weatherParticles[i].x > WINDOW_WIDTH) {
-                weatherParticles[i].x = 0;
-            }
-            context.fillStyle = "#19a";
-            context.fillRect(weatherParticles[i].x += 1, weatherParticles[i].y += 10, 1, 30);
-        }
+        // // des braucht a weatherParticles array
+        // for (let i = 0; i < weatherParticles.length; i++) {
+        //     if (weatherParticles[i].y > WINDOW_HEIGHT) {
+        //         weatherParticles[i].y = 0;
+        //     }
+        //     if (weatherParticles[i].x > WINDOW_WIDTH) {
+        //         weatherParticles[i].x = 0;
+        //     }
+        //     context.fillStyle = "#19a";
+        //     context.fillRect(weatherParticles[i].x += 1, weatherParticles[i].y += 10, 1, 30);
+        // }
 
         window.requestAnimationFrame(update);
     }
@@ -708,10 +576,10 @@ function main() {
                 }, i);
             }
         }
-        function wouldCollide(code) {
-            if (!currentSelection || !currentSelection.movementSpeed) return true;
-            const x = toTileSize(currentSelection.x);
-            const y = toTileSize(currentSelection.y);
+        function wouldCollide(entity, code) {
+            if (!entity || !entity.movementSpeed) return true;
+            const x = toTileSize(entity.x);
+            const y = toTileSize(entity.y);
             let toX = 0;
             let toY = 0;
 
@@ -723,8 +591,8 @@ function main() {
             // falls mir schon in bewegung sind nach rechts oder unten, isses toTileSize
             // natürlich immer no links oben, sollt aber eig die kollision vom tile aus
             // checken, des eins weiter rechts bzw unten is.
-            if (x * TILE_SIZE < currentSelection.x) ++toX;
-            if (y * TILE_SIZE < currentSelection.y) ++toY;
+            if (x * TILE_SIZE < entity.x) ++toX;
+            if (y * TILE_SIZE < entity.y) ++toY;
 
 
             const i = getIndex(x + toX, y + toY, TM_WIDTH); // index of next tile
@@ -733,7 +601,7 @@ function main() {
             // needs to check entities aswell; either look into entities or screen buffer.occupied
             if (!screen_buffer[i].traversable || screen_buffer[i].occupied) {
                 console.log("collision detected:", screen_buffer[i]);
-                console.log("currentSelection:", currentSelection);
+                console.log("entity:", entity);
                 // drawSprite(screen_buffer[i], bgcontext);
                 return true;
             }
@@ -748,28 +616,28 @@ function main() {
 
         switch (event.code) {
             case "KeyW":
-                if (!wouldCollide(event.code))
+                if (!wouldCollide(currentSelection, event.code))
                     animateWalk(
                         screen_buffer[getTileIndex(currentSelection.x, currentSelection.y - TILE_SIZE)],
                         200, TILE_SIZE, () => currentSelection.y--);
                 // animateWalk(200, 20, () => currentSelection.y += -TILE_SIZE / 20);
                 break;
             case "KeyD":
-                if (!wouldCollide(event.code))
+                if (!wouldCollide(currentSelection, event.code))
                     animateWalk(
                         screen_buffer[getTileIndex(currentSelection.x + TILE_SIZE, currentSelection.y)],
                         200, TILE_SIZE, () => currentSelection.x++);
                 // animateWalk(200, 20, () => currentSelection.x += TILE_SIZE / 20);
                 break;
             case "KeyS":
-                if (!wouldCollide(event.code))
+                if (!wouldCollide(currentSelection, event.code))
                     animateWalk(
                         screen_buffer[getTileIndex(currentSelection.x, currentSelection.y + TILE_SIZE)],
                         200, TILE_SIZE, () => currentSelection.y++);
                 // animateWalk(200, 20, () => currentSelection.y += TILE_SIZE / 20);
                 break;
             case "KeyA":
-                if (!wouldCollide(event.code))
+                if (!wouldCollide(currentSelection, event.code))
                     animateWalk(
                         screen_buffer[getTileIndex(currentSelection.x - TILE_SIZE, currentSelection.y)],
                         200, TILE_SIZE, () => currentSelection.x--);
@@ -809,7 +677,10 @@ function main() {
                 break;
         }
     }
-    function handleMouseClick(event) {
+    function handleLeftClick(event) {
+        if (event.button === 2) return; // prevent right click from firing this
+
+        console.log("left", event);
         leftMousePressed = !leftMousePressed;
 
         // handle tile selection
@@ -909,6 +780,19 @@ function main() {
             // while (preview.length > 0) {
             //     screen_buffer.push(preview.pop());
             // }
+        }
+    }
+
+    function handleRightClick(event) {
+        event.preventDefault();
+        console.log("right", event);
+
+
+        if (currentSelection.friendly === 1) {
+            // currentSelection.x = toTileSize(event.x) * TILE_SIZE;
+            // currentSelection.y = toTileSize(event.y) * TILE_SIZE;
+
+            currentSelection.moveTo && currentSelection.moveTo(currentSelection.x, currentSelection.y, toTileSize(event.x) * TILE_SIZE, toTileSize(event.y) * TILE_SIZE, 5);
         }
     }
 
@@ -1235,7 +1119,7 @@ function calculateVisibilityPolygon(edges, ox, oy, radius) {
                 rdx = radius * Math.cos(ang);
                 rdy = radius * Math.sin(ang);
 
-                let min_t1 = 9999999999;
+                let min_t1 = Infinity;
                 let min_px = 0, min_py = 0, min_ang = 0;
                 let bValid = false;
 
@@ -1289,4 +1173,13 @@ function getShortestPath(tilemap, sx, sy, ex, ey) {
     // tilemap
 
     return path;
+}
+
+function drawLine(sx, sy, ex, ey, context, color) {
+    if (color) context.strokeStyle = color;
+    context.beginPath();
+    context.moveTo(sx, sy);
+    context.lineTo(ex, ey);
+    context.stroke();
+
 }
