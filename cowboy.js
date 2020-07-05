@@ -1,3 +1,5 @@
+// "use strict";
+
 const WINDOW_WIDTH = 640; // 2048 | 640; // 640 / 20 = 32
 const WINDOW_HEIGHT = 480 // 1536 | 480; // 480 / 20 = 24
 const PIXEL_SIZE = 1;
@@ -13,33 +15,34 @@ const ATTACK_MODE = "ATK";
 
 const spriteSheet = new Image(40, 20);
 spriteSheet.src = "./sprite-sheet.png";
-const AMBIENT_COLOR = "#e1c699";
+const AMBIENT_COLOR = "#e1c699"; // "#191970"; // midnight blue
 
 let MAP_TEMPLATE = "";
-MAP_TEMPLATE += "################################";
-MAP_TEMPLATE += "#hhhhhhhhhhhhhh#      hhhhhhhhh#";
-MAP_TEMPLATE += "#hhhh       hhh#         hhhhhh#";
-MAP_TEMPLATE += "#hh           h   z  z     hhhh#";
-MAP_TEMPLATE += "#hh                uu       hhh#";
-MAP_TEMPLATE += "#hh  hh####                 hhh#";
-MAP_TEMPLATE += "#hh   h####        hh      hhhh#";
-MAP_TEMPLATE += "#hh   h hhH       hhhh    hhhhh#";
-MAP_TEMPLATE += "#hhh    ==X==========l=========#";
-MAP_TEMPLATE += "#####     H     hhhh H 6   hhhh#";
-MAP_TEMPLATE += "#h        H      hh  H      hhh#";
+
+MAP_TEMPLATE += "#####################H##########";
+MAP_TEMPLATE += "#hhhhhhhhhhhhhh#     Hhhhhhhhhh#";
+MAP_TEMPLATE += "#hhhh       hhh#     H   hhhhhh#";
+MAP_TEMPLATE += "#hh           h  z  zH     hhhh#";
+MAP_TEMPLATE += "#hh   ------      uu H      -hh#";
+MAP_TEMPLATE += "#hh  hh####-    --   H      -hh#";
+MAP_TEMPLATE += "#hh   h####-   ---hh H     -hhh#";
+MAP_TEMPLATE += "#hh   h hhH    --hhhhH    -hhhh#";
+MAP_TEMPLATE += "==========X==========X==========";
+MAP_TEMPLATE += "#####     H    hhhh  H 6   hhhh#";
+MAP_TEMPLATE += "#h        H     hh   H      hhh#";
 MAP_TEMPLATE += "#h  1223h Hh123      H       ###";
-MAP_TEMPLATE += "#h  qwweh Hhqwe      H      hhh#";
-MAP_TEMPLATE += "#h  assdh Hhqwe      H #    hhh#";
-MAP_TEMPLATE += "#h hyxfch Hhqwe   h  H #    hhh#";
-MAP_TEMPLATE += "#h        Hhqwe      H #   hhhh#";
+MAP_TEMPLATE += "#h  qwweh Hhqwe      H        h#";
+MAP_TEMPLATE += "#h  assdh Hhqwe      H #  --  h#";
+MAP_TEMPLATE += "#h hyxfch Hhqwe   h  H # ---  h#";
+MAP_TEMPLATE += "#h        Hhqwe      H # --  hh#";
 MAP_TEMPLATE += "#h  12223 Hhqwe      H      hhh#";
-MAP_TEMPLATE += "#h  qwwwe Hhqwe      H      hhh#";
-MAP_TEMPLATE += "#h  asssd Hhasd      H      hhh#";
-MAP_TEMPLATE += "#h hyxgfc Hhyxc      H     hhhh#";
-MAP_TEMPLATE += "#h        L==========X=========#";
-MAP_TEMPLATE += "#h            #      H   hhhhhh#";
-MAP_TEMPLATE += "#hhhhhhhhhhhhh#hhhhh H hhhhhhhh#";
-MAP_TEMPLATE += "################################";
+MAP_TEMPLATE += "#h  qwwwe Hhqwe    --H      hhh#";
+MAP_TEMPLATE += "#h  asssd Hhasd   ---H      hhh#";
+MAP_TEMPLATE += "#h hyxgfc Hhyxc   ---H     --hh#";
+MAP_TEMPLATE += "==========L==========X=========-";
+MAP_TEMPLATE += "#h            #      H   ---hhh#";
+MAP_TEMPLATE += "#hhhhhhhhhhhhh#hhhhh H ----hhhh#";
+MAP_TEMPLATE += "#####################H##########";
 
 window.onload = main;
 
@@ -54,10 +57,12 @@ function gameObject({ x, y, name, color, sprite }) {
     }
 }
 
-function tile({ x, y, name, color, sprite, traversable, occupied, movementCost }) {
+function tile({ x, y, name, color, sprite, traversable, penetrable, seeable, occupied, movementCost }) {
     return {
         ...gameObject({ x, y, name, color, sprite }),
-        traversable: traversable, // can characters / projectiles / units  move through
+        traversable: traversable, // can creatures move through
+        penetrable: penetrable, // can projectiles move through
+        seeable: seeable, // can projectiles move through
         occupied: occupied === true ? true : false, // is a unit on the tile (eig woll ma de static objects ja nied ändern)
         // hasBuilding: occupied === true ? true : false, // does tile already have building
         movementCost: movementCost || 1
@@ -67,7 +72,8 @@ function tile({ x, y, name, color, sprite, traversable, occupied, movementCost }
 function floor({ x, y, name, sprite, movementCost }) {
     return {
         ...tile({
-            x, y, name, color: "white", traversable: true,
+            x, y, name, color: "white",
+            traversable: true, penetrable: true, seeable: true,
             movementCost: movementCost || 1,
             sprite
         }),
@@ -76,7 +82,8 @@ function floor({ x, y, name, sprite, movementCost }) {
 function wall({ x, y, name, sprite, movementCost }) {
     return {
         ...tile({
-            x, y, name, color: "grey", traversable: false,
+            x, y, name, color: "grey",
+            traversable: false, penetrable: false, seeable: false,
             movementCost: movementCost || 1,
             sprite
         }),
@@ -85,7 +92,18 @@ function wall({ x, y, name, sprite, movementCost }) {
 function halfwall({ x, y, name, sprite }) {
     return {
         ...tile({
-            x, y, name, color: "lightgrey", traversable: true,
+            x, y, name, color: "lightgrey",
+            traversable: true, penetrable: false, seeable: true,
+            movementCost: 2,
+            sprite
+        })
+    }
+}
+function highgrass({ x, y, name, sprite }) {
+    return {
+        ...tile({
+            x, y, name, color: "darkgreen",
+            traversable: true, penetrable: true, seeable: false,
             movementCost: 2,
             sprite
         })
@@ -166,6 +184,7 @@ function projectile({ x, y, sprite, targetX, targetY, animate }) {
 }
 
 function main() {
+    // canvas shit
     const canvas = document.createElement("canvas");
     const bgcanvas = document.createElement("canvas");
     canvas.width = bgcanvas.width = WINDOW_WIDTH;
@@ -176,8 +195,9 @@ function main() {
     document.body.insertBefore(bgcanvas, document.body.childNodes[0]);
     context = canvas.getContext("2d");
     bgcontext = bgcanvas.getContext("2d");
-
     const imageData = context.createImageData(WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    // game data structures
     const screen_buffer = []; // holds tiles objects
     const entities = []; // holds entities
     const overlays = []; // holds overlays
@@ -186,9 +206,17 @@ function main() {
     const fogOfWar = [];
 
     let mode = STANDARD_MODE;
+    let currentSelection;
     let currentMousePosition = { x: 0, y: 0 };
-    let mapInitialized = false; // as to only static tiles once
-    let debug = false;
+    let mapInitialized = false; // as to only load static tiles once
+    let debug = 0;
+
+    let preview = [];
+    var pressedKeys = {};
+    let leftMousePressed = false;
+    let leftMouseDownStart = null;
+    let timePreviousFrame;
+    let fps = 0;
 
     for (let i = 0; i < TM_WIDTH * 4; i++) {
         weatherParticles.push({ x: rand(WINDOW_WIDTH), y: -rand(WINDOW_HEIGHT) })
@@ -203,6 +231,8 @@ function main() {
         const { x, y } = convert1dto2d(i, TM_WIDTH);
         if (MAP_TEMPLATE[i] == " ")
             screen_buffer[i] = { ...floor({ x: x * TILE_SIZE, y: y * TILE_SIZE, name: "grass tile", sprite: { x: 0, y: 0 } }) };
+        if (MAP_TEMPLATE[i] == "-")
+            screen_buffer[i] = { ...highgrass({ x: x * TILE_SIZE, y: y * TILE_SIZE, name: "high grass tile", sprite: { x: 7, y: 2 } }) };
         if (MAP_TEMPLATE[i] == "#")
             screen_buffer[i] = { ...wall({ x: x * TILE_SIZE, y: y * TILE_SIZE, name: "wall tile", sprite: { x: 1, y: 0 } }) };
         if (MAP_TEMPLATE[i] == "h")
@@ -263,7 +293,6 @@ function main() {
         if (MAP_TEMPLATE[i] == "c")
             screen_buffer[i] = { ...wall({ x: x * TILE_SIZE, y: y * TILE_SIZE, name: "house", sprite: { x: 2, y: 5 } }) };
     }
-    console.log(screen_buffer)
     //screen_buffer.forEach(tile => drawSprite(tile, bgcontext));
 
     // load entities
@@ -281,14 +310,6 @@ function main() {
     //     entities.push(gunner({ x: TILE_SIZE * i, y: TILE_SIZE * 4, sprite: { x: 1, y: 1 } }));
     // }
 
-    let preview = [];
-    var pressedKeys = {};
-    let leftMousePressed = false;
-    let leftMouseDownStart = null;
-    let currentSelection;
-    let timePreviousFrame;
-    let fps = 0;
-
     window.onkeyup = function (e) { pressedKeys[e.keyCode] = false; }
     window.onkeydown = function (e) { pressedKeys[e.keyCode] = true; }
 
@@ -298,27 +319,6 @@ function main() {
     let mouseup_event = document.addEventListener("mouseup", handleMouseClick);
 
     window.requestAnimationFrame(update);
-
-    function getTilesWithinVision(x, y, range) {
-        const tilesInRange = [];
-        for (let i = -range; i < range; i++) {
-            for (let j = -range; j < range; j++) {
-                const targetX = x + i * TILE_SIZE;
-                const targetY = y + j * TILE_SIZE;
-
-                if (
-                    isInBounds(targetX, targetY) && (
-                        // if x and y is smaller than our range - (range / 5), it is in range
-                        (Math.abs(i) < range - (range / 5) && Math.abs(j) < range - (range / 5)) ||
-                        getTileDistance(x, y, targetX, targetY) < range
-                    )
-                ) {
-                    tilesInRange.push({ x: targetX, y: targetY });
-                }
-            }
-        }
-        return tilesInRange;
-    }
 
     function update() {
         // console.log("update")
@@ -345,7 +345,7 @@ function main() {
         const visibleTiles = [];
         entities.forEach(e => {
             if (e.friendly === 1) {
-                getTilesWithinVision(e.x, e.y, e.vision).forEach(tile => visibleTiles.push(tile));
+                getTilesWithinDistance(e.x, e.y, e.vision).forEach(tile => visibleTiles.push(tile));
             }
         });
         // bgcontext.clearRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -353,9 +353,19 @@ function main() {
         bgcontext.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
         visibleTiles.forEach(tile => {
             drawSprite(screen_buffer[getTileIndex(tile.x, tile.y)], bgcontext);
+            // bgcontext.fillStyle = "black"; // set background color
+            // bgcontext.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
         });
 
+        function drawLine(sx, sy, ex, ey, context, color) {
+            if (color) context.strokeStyle = color;
+            context.beginPath();
+            context.moveTo(sx, sy);
+            context.lineTo(ex, ey);
+            context.stroke();
 
+        }
+        // also ob de üerhaupt nice isund nied einfach drawSprite besser wär
         function drawTilemap() {
             screen_buffer.forEach((tile, i) => {
                 // i is in tile units
@@ -381,6 +391,101 @@ function main() {
         // set all tiles to unoccupied and then go through entities and set occupied accordingly.
         // not sure about doing it on each frame, but having it in wouldCollide and animateWalk sucks balls
         screen_buffer.forEach(tile => tile.occupied = false);
+
+        // draw debug info
+        if (debug) {
+            const { x, y } = currentMousePosition;
+            context.font = "10px Arial";
+            // go through different debug overlays
+            if (debug === 4) {
+                screen_buffer.forEach(tile => {
+                    context.fillStyle = tile.traversable ? "green" : "red";
+                    context.fillText("T", tile.x, tile.y + 10);
+                    context.fillStyle = tile.occupied ? "green" : "red";
+                    context.fillText("O", tile.x + 10, tile.y + 10);
+                    context.fillStyle = tile.penetrable ? "green" : "red";
+                    context.fillText("P", tile.x, tile.y + 20);
+                    context.fillStyle = tile.seeable ? "green" : "red";
+                    context.fillText("S", tile.x + 10, tile.y + 20);
+
+                });
+            }
+            context.font = "30px Arial";
+            context.fillStyle = "white";
+            context.fillText("" + "x: " + x + " y: " + y + " tx: " + toTileSize(x) + " ty: " + toTileSize(y) + ", fps: " + fps, 0, 30);
+
+            let edges;
+            let key;
+            if (debug === 3) {
+                key = "traversable";
+                edges = convertTileMapToPolyMap(screen_buffer, key, 0, 0, TM_WIDTH, TM_HEIGHT, TILE_SIZE, TM_WIDTH);
+                edges.forEach(edge => drawLine(edge.sx, edge.sy, edge.ex, edge.ey, context, "blue"));
+                const polygon = calculateVisibilityPolygon(edges, x, y, 1000);
+                drawPolygonTriangles(x, y, polygon);
+
+                context.fillStyle = "white";
+                context.fillText(key, 20, 270);
+                context.font = "30px Arial";
+                context.fillText("Rays cast: " + polygon.length, 20, 300);
+            }
+            if (debug === 2) {
+                key = "seeable";
+                edges = convertTileMapToPolyMap(screen_buffer, key, 0, 0, TM_WIDTH, TM_HEIGHT, TILE_SIZE, TM_WIDTH);
+                edges.forEach(edge => drawLine(edge.sx, edge.sy, edge.ex, edge.ey, context, "blue"));
+                const polygon = calculateVisibilityPolygon(edges, x, y, 1000);
+                fillInversePolygon(polygon);
+
+                context.fillStyle = "white";
+                context.fillText(key, 20, 270);
+                context.font = "30px Arial";
+                context.fillText("Rays cast: " + polygon.length, 20, 300);
+            }
+            if (debug === 1) {
+                key = "penetrable";
+                edges = convertTileMapToPolyMap(screen_buffer, key, 0, 0, TM_WIDTH, TM_HEIGHT, TILE_SIZE, TM_WIDTH);
+                edges.forEach(edge => drawLine(edge.sx, edge.sy, edge.ex, edge.ey, context, "blue"));
+                const polygon = calculateVisibilityPolygon(edges, x, y, 1000);
+                drawPolygonTriangles(x, y, polygon);
+
+                context.fillStyle = "white";
+                context.fillText(key, 20, 270);
+                context.font = "30px Arial";
+                context.fillText("Rays cast: " + polygon.length, 20, 300);
+            }
+        }
+        function drawPolygonTriangles(xSource, ySource, polygon) {
+            // // Draw each triangle in fan
+            for (let i = 0; i < polygon.length - 1; i++) {
+                drawLine(xSource, ySource, polygon[i].min_px, polygon[i].min_py, context);
+                drawLine(xSource, ySource, polygon[i + 1].min_px, polygon[i + 1].min_py, context);
+                drawLine(polygon[i].min_px, polygon[i].min_py, polygon[i + 1].min_px, polygon[i + 1].min_py, context);
+            }
+            drawLine(xSource, ySource, polygon[0].min_px, polygon[0].min_py, context);
+            drawLine(xSource, ySource, polygon[polygon.length - 1].min_px, polygon[polygon.length - 1].min_py, context);
+            drawLine(polygon[polygon.length - 1].min_px, polygon[polygon.length - 1].min_py, polygon[0].min_px, polygon[0].min_py, context);
+
+        }
+
+        function fillInversePolygon(polygon) {
+            context.beginPath();
+            // set context styles
+            context.fillStyle = "black";
+            context.moveTo(0, 0);
+            context.lineTo(0, WINDOW_HEIGHT);
+            context.lineTo(WINDOW_WIDTH, WINDOW_HEIGHT);
+            context.lineTo(WINDOW_WIDTH, 0);
+            context.lineTo(0, 0);
+            context.closePath();
+
+            // context.globalCompositeOperation = "lighter"; // spaciger look
+            context.moveTo(polygon[0].min_px, polygon[0].min_py);
+            polygon.forEach(p => {
+                context.lineTo(p.min_px, p.min_py);
+            });
+            context.lineTo(polygon[0].min_px, polygon[0].min_py);
+            context.closePath(); // automatically moves back to bottom left corner
+            context.fill();
+        }
 
         // draw entities
         entities.forEach(e => {
@@ -458,25 +563,6 @@ function main() {
             context.beginPath();
             context.rect(toTileSize(x) * TILE_SIZE, toTileSize(y) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             context.stroke();
-        }
-
-        // draw debug info
-        if (debug) {
-            context.font = "10px Arial";
-            context.fillStyle = "red";
-            screen_buffer.forEach(tile => {
-                context.fillStyle = tile.traversable ? "green" : "red";
-                context.fillText("T", tile.x, tile.y + 10);
-                context.fillStyle = tile.occupied ? "green" : "red";
-                context.fillText("O", tile.x + 10, tile.y + 10);
-                context.fillText("E", tile.x, tile.y + 20);
-                context.fillStyle = tile.occupied ? "green" : "red";
-                context.fillText("X", tile.x + 10, tile.y + 20);
-
-            });
-            context.font = "30px Arial";
-            context.fillStyle = "white";
-            context.fillText("" + "x: " + currentMousePosition.x + " y: " + currentMousePosition.y + " tx: " + toTileSize(currentMousePosition.x) + " ty: " + toTileSize(currentMousePosition.y) + ", fps: " + fps, 0, 30);
         }
 
         // weather particle try
@@ -651,6 +737,7 @@ function main() {
                 // drawSprite(screen_buffer[i], bgcontext);
                 return true;
             }
+            // getIndex weil x, y oben scho toTileSize() 
             const j = getIndex(x, y, TM_WIDTH); // index of current tile
             console.log(i, j)
             screen_buffer[j].occupied = false;
@@ -715,7 +802,7 @@ function main() {
             case "Digit4":
                 break;
             case "Digit9":
-                debug = !debug;
+                debug = debug === 0 ? 5 : debug - 1;
                 break;
             case "Digit0":
                 lightning = 10;
@@ -766,6 +853,7 @@ function main() {
                                         bullet.y += dy / steps;
                                     }, j * (duration / steps) * 1000);
                                 }
+
                                 setTimeout(() => !collided && entities.splice(i, 1), duration * 1000);
 
 
@@ -842,19 +930,19 @@ function convert1dto2d(i, width) {
 }
 
 /**
- * Takes any 2d coordinates and returns the 1d index.
- * @param {*} x 
- * @param {*} y 
- * @param {*} width 
+ * Takes any 2d pixel coordinates and returns the 1d index specified be width.
+ * @param {Number} x 
+ * @param {Number} y 
+ * @param {Number} width 
  */
 function getIndex(x, y, width = WINDOW_WIDTH) {
     return x + width * y;
 }
 
 /**
- * Takes any 2d coordinates and returns the 1d tile index.
- * @param {*} x 
- * @param {*} y 
+ * Takes any 2d pixel coordinates and returns the 1d tile index.
+ * @param {Number} x 
+ * @param {Number} y 
  */
 function getTileIndex(x, y) {
     return getIndex(toTileSize(x), toTileSize(y), TM_WIDTH);
@@ -865,23 +953,23 @@ function toTileSize(n) {
 }
 
 /**
- * Returns a random integer between 0 and n-1
- * @param {int} n 
+ * Returns a random integer between 0 and n-1.
+ * @param {Number} n 
  */
 function rand(n) {
     return Math.floor(Math.random() * n);
 }
 /**
- * Calculate distance between two points in tile units.
+ * Calculate distance between two points and return in tile units.
  * 
  * Es könnt insofern besser sein bei die echten Koordinaten zu bleiben, da getTileDistance viel dividiert.
  * Da große Unterschied is, dass ma dann beim range-check (range * TILE_SIZE) machen müssen: 
  * if (getDistance(x, y, e.x, e.y) < range * TILE_SIZE) vs
  * if (getTileDistance(x, y, e.x, e.y) < range) 
- * @param {Float} x1 
- * @param {Float} y1 
- * @param {Float} x2 
- * @param {Float} y2 
+ * @param {Number} x1 
+ * @param {Number} y1 
+ * @param {Number} x2 
+ * @param {Number} y2 
  */
 function getTileDistance(x1, y1, x2, y2) {
     const dx = toTileSize(x2) - toTileSize(x1);
@@ -907,5 +995,298 @@ function isInBounds(x, y) {
  * @param {Number} b 
  */
 function pythagoras(a, b) {
-    return a * a + b * b
+    return a * a + b * b;
+}
+
+/**
+ * returns array of tiles within given range
+ * @param {Number} x  - in pixel units
+ * @param {Number} y - in pixel units
+ * @param {Number} range - in tile units
+ */
+function getTilesWithinDistance(x, y, range) {
+    const tilesInRange = [];
+    for (let i = -range; i < range; i++) {
+        for (let j = -range; j < range; j++) {
+            const targetX = x + i * TILE_SIZE;
+            const targetY = y + j * TILE_SIZE;
+
+            if (
+                isInBounds(targetX, targetY) && (
+                    // if x and y is smaller than our range - (range / 5), it is in range
+                    (Math.abs(i) < range - (range / 5) && Math.abs(j) < range - (range / 5)) ||
+                    getTileDistance(x, y, targetX, targetY) < range
+                )
+            ) {
+                // it should not include duplicates (overlapping regions of vision), but does
+                tilesInRange.push({ x: targetX, y: targetY });
+            }
+        }
+    }
+    return tilesInRange;
+}
+
+
+// ------------ EDGE DETECTION ___________
+function sEdge() {
+    return {
+        sx: 0, sy: 0, // Start coordinate
+        ex: 0, ey: 0 // End coordinate
+    };
+}
+
+function sCell() {
+    return {
+        edge_id: [],
+        edge_exist: [],
+        exist: false
+    };
+}
+
+const NORTH = 0;
+const SOUTH = 1;
+const EAST = 2;
+const WEST = 3;
+
+/**
+ * Takes a tile map in 1d and returns an array of edges.
+ * Heavily inspired by Javidx9's video on ray casting. 
+ * Line Of Sight or Shaodw Casting in 2D: https://www.youtube.com/watch?v=fc3nnG2CG8U
+ * @param {Object} tilemap 
+ * @param {String} key - the field of the tile to check for 
+ * @param {*} sx - start coordinates
+ * @param {*} sy - start coordinates
+ * @param {*} w - tilemap width
+ * @param {*} h - tilemap height
+ * @param {*} fBlockWidth - tile size
+ * @param {*} pitch - tile size (warum auch immer)
+ */
+function convertTileMapToPolyMap(tilemap, key, sx, sy, w, h, fBlockWidth, pitch) {
+    "use strict";
+    const world = [];
+
+    const edges = [];
+
+    for (let x = 0; x < w; x++)
+        for (let y = 0; y < h; y++)
+            for (let j = 0; j < 4; j++) {
+                const cell = sCell();
+                cell.edge_exist[j] = false;
+                cell.edge_id[j] = 0;
+                world[(y + sy) * pitch + (x + sx)] = cell;
+            }
+
+    // Iterate through region from top left to bottom right
+    for (let x = 1; x < w - 1; x++)
+        for (let y = 1; y < h - 1; y++) {
+            // Create some convenient indices
+            const i = (y + sy) * pitch + (x + sx);			// This
+            const n = (y + sy - 1) * pitch + (x + sx);		// Northern Neighbour
+            const s = (y + sy + 1) * pitch + (x + sx);		// Southern Neighbour
+            const w = (y + sy) * pitch + (x + sx - 1);	// Western Neighbour
+            const e = (y + sy) * pitch + (x + sx + 1);	// Eastern Neighbour
+
+            // If this cell exists, check if it needs edges
+            if (tilemap[i][key]) {
+                world[i].exist = true;
+                // If this cell has no western neighbour, it needs a western edge
+                if (!tilemap[w][key]) {
+                    // It can either extend it from its northern neighbour if they have
+                    // one, or It can start a new one.
+                    if (world[n].edge_exist[WEST]) {
+                        // Northern neighbour has a western edge, so grow it downwards
+                        edges[world[n].edge_id[WEST]].ey += fBlockWidth;
+                        world[i].edge_id[WEST] = world[n].edge_id[WEST];
+                        world[i].edge_exist[WEST] = true;
+                    }
+                    else {
+                        // Northern neighbour does not have one, so create one
+                        const edge = sEdge();
+                        edge.sx = (sx + x) * fBlockWidth; edge.sy = (sy + y) * fBlockWidth;
+                        edge.ex = edge.sx; edge.ey = edge.sy + fBlockWidth;
+
+                        // Add edge to Polygon Pool
+                        const edge_id = edges.length;
+                        edges.push(edge);
+
+                        // Update tile information with edge information
+                        world[i].edge_id[WEST] = edge_id;
+                        world[i].edge_exist[WEST] = true;
+                    }
+                }
+
+                // If this cell dont have an eastern neighbour, It needs a eastern edge
+                if (!tilemap[e][key]) {
+                    // It can either extend it from its northern neighbour if they have
+                    // one, or It can start a new one.
+                    if (world[n].edge_exist[EAST]) {
+                        // Northern neighbour has one, so grow it downwards
+                        edges[world[n].edge_id[EAST]].ey += fBlockWidth;
+                        world[i].edge_id[EAST] = world[n].edge_id[EAST];
+                        world[i].edge_exist[EAST] = true;
+                    }
+                    else {
+                        // Northern neighbour does not have one, so create one
+                        const edge = sEdge();
+                        edge.sx = (sx + x + 1) * fBlockWidth; edge.sy = (sy + y) * fBlockWidth;
+                        edge.ex = edge.sx; edge.ey = edge.sy + fBlockWidth;
+
+                        // Add edge to Polygon Pool
+                        const edge_id = edges.length;
+                        edges.push(edge);
+
+                        // Update tile information with edge information
+                        world[i].edge_id[EAST] = edge_id;
+                        world[i].edge_exist[EAST] = true;
+                    }
+                }
+
+                // If this cell doesnt have a northern neignbour, It needs a northern edge
+                if (!tilemap[n][key]) {
+                    // It can either extend it from its western neighbour if they have
+                    // one, or It can start a new one.
+                    if (world[w].edge_exist[NORTH]) {
+                        // Western neighbour has one, so grow it eastwards
+                        edges[world[w].edge_id[NORTH]].ex += fBlockWidth;
+                        world[i].edge_id[NORTH] = world[w].edge_id[NORTH];
+                        world[i].edge_exist[NORTH] = true;
+                    }
+                    else {
+                        // Western neighbour does not have one, so create one
+                        const edge = sEdge();
+                        edge.sx = (sx + x) * fBlockWidth; edge.sy = (sy + y) * fBlockWidth;
+                        edge.ex = edge.sx + fBlockWidth; edge.ey = edge.sy;
+
+                        // Add edge to Polygon Pool
+                        const edge_id = edges.length;
+                        edges.push(edge);
+
+                        // Update tile information with edge information
+                        world[i].edge_id[NORTH] = edge_id;
+                        world[i].edge_exist[NORTH] = true;
+                    }
+                }
+
+                // If this cell doesnt have a southern neignbour, It needs a southern edge
+                if (!tilemap[s][key]) {
+                    // It can either extend it from its western neighbour if they have
+                    // one, or It can start a new one.
+                    if (world[w].edge_exist[SOUTH]) {
+                        // Western neighbour has one, so grow it eastwards
+                        edges[world[w].edge_id[SOUTH]].ex += fBlockWidth;
+                        world[i].edge_id[SOUTH] = world[w].edge_id[SOUTH];
+                        world[i].edge_exist[SOUTH] = true;
+                    } else {
+                        // Western neighbour does not have one, so I need to create one
+                        const edge = sEdge();
+                        edge.sx = (sx + x) * fBlockWidth; edge.sy = (sy + y + 1) * fBlockWidth;
+                        edge.ex = edge.sx + fBlockWidth; edge.ey = edge.sy;
+
+                        // Add edge to Polygon Pool
+                        const edge_id = edges.length;
+                        edges.push(edge);
+
+                        // Update tile information with edge information
+                        world[i].edge_id[SOUTH] = edge_id;
+                        world[i].edge_exist[SOUTH] = true;
+                    }
+                }
+
+            }
+
+        }
+    return edges;
+}
+
+/**
+ * 
+ * Heavily inspired by Javidx9's video on ray casting. 
+ * Line Of Sight or Shaodw Casting in 2D: https://www.youtube.com/watch?v=fc3nnG2CG8U
+ * @param {*} edges 
+ * @param {*} ox 
+ * @param {*} oy 
+ * @param {*} radius 
+ */
+function calculateVisibilityPolygon(edges, ox, oy, radius) {
+    // Get rid of existing polygon
+    const polygon = [];
+
+    // For each edge in PolyMap
+    for (let i = 0; i < edges.length; i++) {
+        const e1 = edges[i];
+        // Take the start point, then the end point (we could use a pool of
+        // non-duplicated points here, it would be more optimal)
+        for (let i = 0; i < 2; i++) {
+            let rdx, rdy;
+            rdx = (i == 0 ? e1.sx : e1.ex) - ox;
+            rdy = (i == 0 ? e1.sy : e1.ey) - oy;
+
+            const base_ang = Math.atan2(rdy, rdx);
+
+            let ang = 0;
+            // For each point, cast 3 rays, 1 directly at point
+            // and 1 a little bit either side
+            for (let j = 0; j < 3; j++) {
+                if (j == 0) ang = base_ang - 0.0001;
+                if (j == 1) ang = base_ang;
+                if (j == 2) ang = base_ang + 0.0001;
+
+                // Create ray along angle for required distance
+                rdx = radius * Math.cos(ang);
+                rdy = radius * Math.sin(ang);
+
+                let min_t1 = 9999999999;
+                let min_px = 0, min_py = 0, min_ang = 0;
+                let bValid = false;
+
+                // Check for ray intersection with all edges
+                for (let j = 0; j < edges.length; j++) {
+                    const e2 = edges[j];
+                    // Create line segment vector
+                    const sdx = e2.ex - e2.sx;
+                    const sdy = e2.ey - e2.sy;
+
+                    // ensure that both edges are reasonably different. They could be identical
+                    // and thus produce infinite solutions.
+                    if (Math.abs(sdx - rdx) > 0.0 && Math.abs(sdy - rdy) > 0.0) {
+                        // t2 is normalised distance from line segment start to line segment end of intersect point
+                        const t2 = (rdx * (e2.sy - oy) + (rdy * (ox - e2.sx))) / (sdx * rdy - sdy * rdx);
+                        // t1 is normalised distance from source along ray to ray length of intersect point
+                        const t1 = (e2.sx + sdx * t2 - ox) / rdx;
+
+                        // If intersect point exists along ray, and along line 
+                        // segment then intersect point is valid
+                        if (t1 > 0 && t2 >= 0 && t2 <= 1.0) {
+                            // Check if this intersect point is closest to source. If
+                            // it is, then store this point and reject others
+                            if (t1 < min_t1) {
+                                min_t1 = t1;
+                                min_px = ox + rdx * t1;
+                                min_py = oy + rdy * t1;
+                                min_ang = Math.atan2(min_py - oy, min_px - ox);
+                                bValid = true;
+                            }
+                        }
+                    }
+                }
+
+                if (bValid)// Add intersection point to visibility polygon perimeter
+                    polygon.push({ min_ang, min_px, min_py });
+            }
+        }
+    }
+
+    // Sort perimeter points by angle from source. This will allow
+    // us to draw a triangle fan.
+    return polygon.sort((a, b) => a.min_ang - b.min_ang);
+
+}
+
+
+function getShortestPath(tilemap, sx, sy, ex, ey) {
+    const path = [];
+
+    // tilemap
+
+    return path;
 }
