@@ -1,0 +1,31 @@
+{
+  "name": "cowboy",
+  "version": "1.0.0",
+  "description": "This is a tile-based 2d shooter.\r *Demo at*: https://raphaelmayer.github.io/cowboy",
+  "main": "cowboy.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "webpack-dev-server": "webpack-dev-server",
+    "dev": "webpack-dev-server --mode=development",
+    "prod": "webpack --mode=production"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raphaelmayer/cowboy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/raphaelmayer/cowboy/issues"
+  },
+  "homepage": "https://github.com/raphaelmayer/cowboy#readme",
+  "devDependencies": {
+    "file-loader": "^6.0.0",
+    "html-webpack-plugin": "^4.3.0",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
+  }
+}

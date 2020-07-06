@@ -34,11 +34,30 @@ GameObject
         Floor: Door, Road
         Wall: Tree
 
+ok, da plän:
+shooting implementation überdenken
+granaten und 3 schuss in arc implementieren
+Health & Damage System
+
+Webpack dir:
+/
+    src
+        Controller
+        classes
+        util
+        constants / - .js
+        index.js
+    dist
+        index.html
+
 TODO:
+move projectile.animate to class:
+    also velocity als stat von projectile()
 des ganze amal in tile_size konvertieren
 des ganze amal zu vernünftige klassen konvertieren
 Collision Detection
 Mouse Controls
+Camera Controller
 Shooting
 Path Finding
 Turn System
@@ -64,3 +83,11 @@ bullet spam removes multiple entities
 
 Chars sind eigentlich in da oberen linken ecke von am tile, dadurch passieren viele Sachen 
 nach links / oben instant und nach rechts / unten verzögert. (einfache lösung wär, die position zu normalisieren oder an offset iwi festlegen)
+
+
+so a tile muss können:
+kann ma drauf gehen?
+kann man durchschießen?
+behinderts vision? => Javidx9 Edge Algorithm
+    wer drin is, sieht alles
+    von außen blockts vision aber komplett (wie League of Legends)

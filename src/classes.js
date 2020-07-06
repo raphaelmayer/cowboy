@@ -3,13 +3,15 @@
  * @param {Float} x 
  * @param {Float} y 
  */
-function gameObject({ x, y, name, color, sprite }) {
+export function gameObject({ x, y, name, color, sprite }) {
     return {
-        x, y, name: name || "null", sprite: sprite || { x: 6, y: 2 }, color: color || "red"
+        x, y, name: name || "null", 
+        sprite: sprite || { x: 6, y: 2 }, 
+        color: color || "red"
     }
 }
 
-function tile({ x, y, name, color, sprite, traversable, penetrable, seeable, occupied, movementCost }) {
+export function tile({ x, y, name, color, sprite, traversable, penetrable, seeable, occupied, movementCost }) {
     return {
         ...gameObject({ x, y, name, color, sprite }),
         traversable: traversable, // can creatures move through
@@ -21,7 +23,7 @@ function tile({ x, y, name, color, sprite, traversable, penetrable, seeable, occ
     }
 }
 
-function floor({ x, y, name, sprite, movementCost }) {
+export function floor({ x, y, name, sprite, movementCost }) {
     return {
         ...tile({
             x, y, name, color: "white",
@@ -31,7 +33,7 @@ function floor({ x, y, name, sprite, movementCost }) {
         }),
     }
 }
-function wall({ x, y, name, sprite, movementCost }) {
+export function wall({ x, y, name, sprite, movementCost }) {
     return {
         ...tile({
             x, y, name, color: "grey",
@@ -41,60 +43,61 @@ function wall({ x, y, name, sprite, movementCost }) {
         }),
     }
 }
-function halfwall({ x, y, name, sprite }) {
+export function halfwall({ x, y, name, sprite, movementCost }) {
     return {
         ...tile({
             x, y, name, color: "lightgrey",
             traversable: true, penetrable: false, seeable: true,
-            movementCost: 2,
+            movementCost: movementCost || 2,
             sprite
         })
     }
 }
-function highgrass({ x, y, name, sprite }) {
+export function highgrass({ x, y, name, sprite, movementCost }) {
     return {
         ...tile({
             x, y, name, color: "darkgreen",
             traversable: true, penetrable: true, seeable: false,
-            movementCost: 2,
+            movementCost: movementCost || 2,
             sprite
         })
     }
 }
 
-function entity({ x, y, name, color, sprite, movementSpeed, friendly, vision }) {
+export function entity({ x, y, name, color, sprite, movementSpeed, friendly, vision }) {
     return {
         ...gameObject({ x, y, name, color, sprite }),
         draw: null, // not in use; array of entities gets drawn to screen by coordinates
         movementSpeed,
         friendly: friendly ? friendly : 0, // enemy: -1, neutral: 0, friendly: 1
         vision: vision || 10,
+        xVel: 0,
+        yVel: 0,
 
-        moveTo: function moveTo(sx, sy, ex, ey, velocity) {
-            // velocity in tile / second
-            console.log("bullet animate")
-            const steps = 100;
-            const distance = getTileDistance(sx, sy, ex, ey);
-            const duration = distance / velocity;
-            console.log("distance:", distance, "tiles, duration:", duration, "s");
+        moveTo: (sx, sy, ex, ey, velocity) => {
+            this.xVel += ex - sx;
+            this.yVel += ey - sy;
+            // // velocity in tile / second
+            // const steps = 100;
+            // const distance = getTileDistance(sx, sy, ex, ey);
+            // const duration = distance / velocity;
+            // console.log("distance:", distance, "tiles, duration:", duration, "s");
 
-            let collided = false;
-            const dx = ex - sx;
-            const dy = ey - sy;
-            for (let i = 0, j = 1; i < duration; i += (duration / steps), j++) {
-                setTimeout(() => {
-                    // console.log("dx " + dx + ", dy " + dy)
-                    this.x += dx / steps;
-                    this.y += dy / steps;
-                }, j * (duration / steps) * 1000);
-            }
+            // const dx = ex - sx;
+            // const dy = ey - sy;
 
-            // setTimeout(() => !collided && entities.splice(i, 1), duration * 1000);
+            // for (let i = 0, j = 1; i < duration; i += (duration  / steps), j++) {
+            //     setTimeout(() => {
+            //         // console.log("dx " + dx + ", dy " + dy)
+            //         this.x += dx  / steps;
+            //         this.y += dy  / steps;
+            //     }, j * (duration  / steps) * 1000);
+            // }
         }
     };
 }
 
-function soldier({ x, y, name, color, sprite, range, movementSpeed, friendly }) {
+export function soldier({ x, y, name, color, sprite, range, movementSpeed, friendly }) {
     movementSpeed = 4;
     return {
         ...entity({ x, y, name, color, sprite, movementSpeed, friendly }),
@@ -108,7 +111,7 @@ function soldier({ x, y, name, color, sprite, range, movementSpeed, friendly }) 
     };
 }
 
-function gunner({ x, y, name, sprite, friendly }) {
+export function gunner({ x, y, name, sprite, friendly }) {
     return {
         ...soldier({
             x, y, name, friendly,
@@ -124,7 +127,7 @@ function gunner({ x, y, name, sprite, friendly }) {
     }
 }
 
-function sniper({ x, y, friendly }) {
+export function sniper({ x, y, friendly }) {
     return {
         ...soldier({
             x, y, friendly,
@@ -140,13 +143,13 @@ function sniper({ x, y, friendly }) {
     }
 }
 
-function chicken({ x, y, name }) {
+export function chicken({ x, y, name }) {
     return {
         ...entity({ x, y, name: "chicken", sprite: { x: 2, y: 1 }, movementSpeed: 3 })
     }
 }
 
-function projectile({ x, y, sprite, targetX, targetY, animate }) {
+export function projectile({ x, y, sprite, targetX, targetY, animate }) {
     sprite = sprite || { x: 5, y: 0 };
     return {
         ...entity({ x, y, sprite }),
